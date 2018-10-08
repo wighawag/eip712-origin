@@ -1,38 +1,8 @@
 const ethUtil = require('ethereumjs-util');
 const abi = require('ethereumjs-abi');
-const chai = require('chai');
-
-const typedData = {
-    types: {
-        EIP712Domain: [
-            { name: 'name', type: 'string' },
-            { name: 'version', type: 'string' },
-            { name: 'chainId', type: 'uint256' },
-            { name: 'verifyingContract', type: 'address' },
-        ],
-        Person: [
-            { name: 'name', type: 'string' },
-            { name: 'wallet', type: 'address' }
-        ],
-        Mail: [
-            { name: 'from', type: 'Person' },
-            { name: 'to', type: 'Person' },
-            { name: 'contents', type: 'string' }
-        ],
-    },
-    primaryType: 'Mail',
-    domain: {
-        name: 'Ether Mail',
-        version: '1',
-        chainId: 1,
-        verifyingContract: '0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC',
-    }
-};
-
-const types = typedData.types;
 
 // Recursively finds all the dependencies of a type
-function dependencies(primaryType, found = []) {
+function dependencies(types, primaryType, found = []) {
     if (found.includes(primaryType)) {
         return found;
     }
@@ -41,7 +11,7 @@ function dependencies(primaryType, found = []) {
     }
     found.push(primaryType);
     for (let field of types[primaryType]) {
-        for (let dep of dependencies(field.type, found)) {
+        for (let dep of dependencies(types, field.type, found)) {
             if (!found.includes(dep)) {
                 found.push(dep);
             }
@@ -50,9 +20,9 @@ function dependencies(primaryType, found = []) {
     return found;
 }
 
-function encodeType(primaryType) {
+function encodeType(types, primaryType) {
     // Get dependencies primary first, then alphabetical
-    let deps = dependencies(primaryType);
+    let deps = dependencies(types, primaryType);
     deps = deps.filter(t => t != primaryType);
     deps = [primaryType].concat(deps.sort());
 
@@ -64,65 +34,75 @@ function encodeType(primaryType) {
     return result;
 }
 
-function typeHash(primaryType) {
-    return ethUtil.sha3(encodeType(primaryType));
+function typeHash(types, primaryType) {
+    return ethUtil.sha3(encodeType(types, primaryType));
 }
 
-function encodeData(primaryType, data) {
-    let encTypes = [];
-    let encValues = [];
 
-    // Add typehash
-    encTypes.push('bytes32');
-    encValues.push(typeHash(primaryType));
-
-    // Add field contents
-    for (let field of types[primaryType]) {
-        let value = data[field.name];
-        if (field.type == 'string' || field.type == 'bytes') {
-            encTypes.push('bytes32');
-            value = ethUtil.sha3(value);
-            encValues.push(value);
-        } else if (types[field.type] !== undefined) {
-            encTypes.push('bytes32');
-            value = ethUtil.sha3(encodeData(field.type, value));
-            encValues.push(value);
-        } else if (field.type.lastIndexOf(']') === field.type.length - 1) {
-            throw 'TODO: Arrays currently unimplemented in encodeData';
-        } else {
-            encTypes.push(field.type);
-            encValues.push(value);
-        }
+class EIP712{
+    constructor(types, primaryType, domainType) {
+      this.primaryType = primaryType;
+      this.types = types; 
+      this.domainType = domainType;
     }
 
-    return abi.rawEncode(encTypes, encValues);
-}
+    encodeData(type, data) {
+        const types = this.types;
 
-function structHash(primaryType, data) {
-    return ethUtil.sha3(encodeData(primaryType, data));
-}
+        let encTypes = [];
+        let encValues = [];    
+    
+        // Add typehash
+        encTypes.push('bytes32');
+        encValues.push(typeHash(types, type)); // TODO cache
+    
+        // Add field contents
+        for (let field of types[type]) {
+            let value = data[field.name];
+            if (field.type == 'string' || field.type == 'bytes') {
+                encTypes.push('bytes32');
+                value = ethUtil.sha3(value);
+                encValues.push(value);
+            } else if (types[field.type] !== undefined) {
+                encTypes.push('bytes32');
+                value = ethUtil.sha3(this.encodeData(field.type, value));
+                encValues.push(value);
+            } else if (field.type.lastIndexOf(']') === field.type.length - 1) {
+                throw 'TODO: Arrays currently unimplemented in encodeData';
+            } else {
+                encTypes.push(field.type);
+                encValues.push(value);
+            }
+        }
+    
+        return abi.rawEncode(encTypes, encValues);
+    }
 
-function hash(message) {
-    return ethUtil.sha3(
-        Buffer.concat([
-            Buffer.from('1901', 'hex'),
-            structHash('EIP712Domain', typedData.domain),
-            structHash(typedData.primaryType, message),
-        ]),
-    );
-}
+    structHash(type, data) {
+        return ethUtil.sha3(this.encodeData(type, data));
+    }
 
-function generateSignature(message) {
-    const privateKey = ethUtil.sha3('cow');
-    const address = ethUtil.privateToAddress(privateKey);
-    const sig = ethUtil.ecsign(hash(message), privateKey);
-    return {
-        v: sig.v,
-        r: '0x' + sig.r.toString('hex'),
-        s: '0x' + sig.s.toString('hex')
+    hash(domain, message) {
+        return ethUtil.sha3(
+            Buffer.concat([
+                Buffer.from('1901', 'hex'),
+                this.structHash(this.domainType, domain),
+                this.structHash(this.primaryType, message)
+            ]),
+        );
+    }
+    
+    generateSignature(domain, message, privateKey) {
+        const hash = this.hash(domain, message);
+        const sig = ethUtil.ecsign(hash, privateKey);
+        return {
+            v: sig.v,
+            r: '0x' + sig.r.toString('hex'),
+            s: '0x' + sig.s.toString('hex')
+        }
     }
 }
 
 module.exports = {
-    generateSignature
+    EIP712
 }

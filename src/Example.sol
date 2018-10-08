@@ -120,4 +120,66 @@ contract Example {
         assert(verify(mail, v, r, s));
         return true;
     }
+
+
+    ////////////////////////////// using origin //////
+    struct EIP712DomainWithOrigin {
+        string  name;
+        string  version;
+        uint256 chainId;
+        address verifyingContract;
+        bytes32 originHash;
+    }
+    bytes32 constant EIP712DOMAINWITHORIGIN_TYPEHASH = keccak256(
+        "EIP712DomainWithOrigin(string name,string version,uint256 chainId,address verifyingContract,bytes32 originHash)"
+    );
+    function hash(EIP712DomainWithOrigin eip712Domain) internal pure returns (bytes32) {
+        return keccak256(abi.encode(
+            EIP712DOMAINWITHORIGIN_TYPEHASH,
+            keccak256(bytes(eip712Domain.name)),
+            keccak256(bytes(eip712Domain.version)),
+            eip712Domain.chainId,
+            eip712Domain.verifyingContract,
+            eip712Domain.originHash
+        ));
+    }
+    function verify(Mail mail, bytes32 _originHash, uint8 v, bytes32 r, bytes32 s) internal view returns (bool) {
+        // Note: we need to use `encodePacked` here instead of `encode`.
+        bytes32 digest = keccak256(abi.encodePacked(
+            "\x19\x01",
+            domainSeparators[mail.from.wallet][_originHash],
+            hash(mail)
+        ));
+        return ecrecover(digest, v, r, s) == mail.from.wallet;
+    }
+
+    mapping(address => mapping(bytes32 => bytes32)) domainSeparators;
+    function approveOrigin(bytes32 _originHash) external {
+        domainSeparators[msg.sender][_originHash] = hash(EIP712DomainWithOrigin({ // could compute the whole thing client side
+            name: "Ether Mail",
+            version: '1',
+            chainId: 1,
+            // verifyingContract: this
+            verifyingContract: 0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC,
+            originHash: _originHash
+        }));
+    }
+
+    function test(string _fromName, address _fromWallet, string _toName, address _toWallet, string _content, bytes32 _originHash, uint8 v, bytes32 r, bytes32 s) public view returns (bool) {
+        // Example signed message
+        Mail memory mail = Mail({
+            from: Person({
+               name: _fromName,
+               wallet: _fromWallet
+            }),
+            to: Person({
+                name: _toName,
+                wallet: _toWallet
+            }),
+            contents: _content
+        });
+        assert(verify(mail, _originHash, v, r, s));
+        return true;
+    }
+
 }
