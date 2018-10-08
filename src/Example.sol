@@ -149,19 +149,19 @@ contract Example {
         bytes32 digest = keccak256(abi.encodePacked(
             "\x19\x01",
             domainSeparators[mail.from.wallet][_originHash],
-            hash(mail)
+            hash(mail),
+            true
         ));
         return ecrecover(digest, v, r, s) == mail.from.wallet;
     }
 
-     function verify(Mail mail, bytes32 _originHash, bool nonInteractive, uint8 v, bytes32 r, bytes32 s) internal view returns (bool) {
-        // TODO require(interactive)
+     function verify(Mail mail, bytes32 _originHash, bool interactive, uint8 v, bytes32 r, bytes32 s) internal view returns (bool) {
         // Note: we need to use `encodePacked` here instead of `encode`.
         bytes32 digest = keccak256(abi.encodePacked(
             "\x19\x01",
             domainSeparators[mail.from.wallet][_originHash],
             hash(mail),
-            nonInteractive
+            interactive
         ));
         return ecrecover(digest, v, r, s) == mail.from.wallet;
     }
@@ -195,7 +195,7 @@ contract Example {
         return true;
     }
 
-    function test(string _fromName, address _fromWallet, string _toName, address _toWallet, string _content, bytes32 _originHash, bool nonInteractive, uint8 v, bytes32 r, bytes32 s) public view returns (bool) {
+    function test(string _fromName, address _fromWallet, string _toName, address _toWallet, string _content, bytes32 _originHash, bool interactive, uint8 v, bytes32 r, bytes32 s) public view returns (bool) {
         // Example signed message
         Mail memory mail = Mail({
             from: Person({
@@ -208,7 +208,7 @@ contract Example {
             }),
             contents: _content
         });
-        assert(verify(mail, _originHash, nonInteractive, v, r, s));
+        assert(verify(mail, _originHash, interactive, v, r, s));
         return true;
     }
 
