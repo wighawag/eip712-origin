@@ -46,67 +46,67 @@ contract('Example', (accounts) => {
         ).send({from: accounts[0], gas: 4000000}));
   });
 
-//   it('generated signature should succeed verification', async () => {  
-//     await web3.eth.sendTransaction({from: accounts[0], to: testAddress, gas : 4000000, value: 1000000000000000000});
-//     const exampleContract = await getMigratedContract('Example');
-//     const domain = {
-//         name: 'Ether Mail',
-//         version: '1',
-//         chainId: 1,
-//         verifyingContract: '0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC',
-//     };
-//     const message = {
-//         from: {
-//             name: 'Cow',
-//             wallet: '0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826',
-//         },
-//         to: {
-//             name: 'Bob',
-//             wallet: '0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB',
-//         },
-//         contents: 'Hello, Bob!',
-//     }
-//     const eip712 = new EIP712(
-//         {
-//             EIP712Domain: [
-//                 { name: 'name', type: 'string' },
-//                 { name: 'version', type: 'string' },
-//                 { name: 'chainId', type: 'uint256' },
-//                 { name: 'verifyingContract', type: 'address' },
-//             ],
-//             Person: [
-//                 { name: 'name', type: 'string' },
-//                 { name: 'wallet', type: 'address' }
-//             ],
-//             Mail: [
-//                 { name: 'from', type: 'Person' },
-//                 { name: 'to', type: 'Person' },
-//                 { name: 'contents', type: 'string' }
-//             ],
-//         },
-//         'Mail', 'EIP712Domain');
+  it('generated signature should succeed verification', async () => {  
+    await web3.eth.sendTransaction({from: accounts[0], to: testAddress, gas : 4000000, value: 1000000000000000000});
+    const exampleContract = await getMigratedContract('Example');
+    const domain = {
+        name: 'Ether Mail',
+        version: '1',
+        chainId: 1,
+        verifyingContract: '0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC',
+    };
+    const message = {
+        from: {
+            name: 'Cow',
+            wallet: '0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826',
+        },
+        to: {
+            name: 'Bob',
+            wallet: '0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB',
+        },
+        contents: 'Hello, Bob!',
+    }
+    const eip712 = new EIP712(
+        {
+            EIP712Domain: [
+                { name: 'name', type: 'string' },
+                { name: 'version', type: 'string' },
+                { name: 'chainId', type: 'uint256' },
+                { name: 'verifyingContract', type: 'address' },
+            ],
+            Person: [
+                { name: 'name', type: 'string' },
+                { name: 'wallet', type: 'address' }
+            ],
+            Mail: [
+                { name: 'from', type: 'Person' },
+                { name: 'to', type: 'Person' },
+                { name: 'contents', type: 'string' }
+            ],
+        },
+        'Mail', 'EIP712Domain');
 
-//     const signature = eip712.generateSignature(domain, message, true, privateKey);
-//     const txData = exampleContract.methods.test(
-//         message.from.name, 
-//         message.from.wallet,
-//         message.to.name,
-//         message.to.wallet,
-//         message.contents,
-//         signature.v,
-//         signature.r,
-//         signature.s).encodeABI();
+    const signature = eip712.generateSignature(privateKey, domain, message);
+    const txData = exampleContract.methods.test(
+        message.from.name, 
+        message.from.wallet,
+        message.to.name,
+        message.to.wallet,
+        message.contents,
+        signature.v,
+        signature.r,
+        signature.s).encodeABI();
     
-//     const tx = {
-//         to: exampleContract.options.address,
-//         from: testAddress,
-//         data: txData,
-//         gas: 400000
-//     }
-//     const signedTx = await web3.eth.accounts.signTransaction(tx, privateKeyString);
-//     await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
-//     assert.equal(true, true);
-//   });
+    const tx = {
+        to: exampleContract.options.address,
+        from: testAddress,
+        data: txData,
+        gas: 400000
+    }
+    const signedTx = await web3.eth.accounts.signTransaction(tx, privateKeyString);
+    await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+    assert.equal(true, true);
+  });
 
   it('using a wrong signature should fail', async () => {  
     await web3.eth.sendTransaction({from: accounts[0], to: testAddress, gas : 4000000, value: 1000000000000000000})
@@ -148,8 +148,8 @@ contract('Example', (accounts) => {
         version: '1',
         chainId: 1,
         verifyingContract: '0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC',
-        originHash: '0x00000000000000000000000000000000' //serve as a wild card
     };
+    const originHash = '0xb5dae52ffc95f46fe81359542fd5da76ce6c27070d6e32d88ff787c5e7ed4dc9';
     const message = {
         from: {
             name: 'Cow',
@@ -163,12 +163,11 @@ contract('Example', (accounts) => {
     }
     const eip712 = new EIP712(
         {
-            EIP712DomainWithOrigin: [
+            EIP712Domain: [
                 { name: 'name', type: 'string' },
                 { name: 'version', type: 'string' },
                 { name: 'chainId', type: 'uint256' },
-                { name: 'verifyingContract', type: 'address' },
-                { name: 'originHash', type: 'bytes32' },
+                { name: 'verifyingContract', type: 'address' }
             ],
             Person: [
                 { name: 'name', type: 'string' },
@@ -180,12 +179,12 @@ contract('Example', (accounts) => {
                 { name: 'contents', type: 'string' }
             ],
         },
-        'Mail', 'EIP712DomainWithOrigin');
+        'Mail', 'EIP712Domain');
 
-    const signature = eip712.generateSignature(domain, message, true, privateKey);
+    const signature = eip712.generateSignature(privateKey, domain, message, originHash, true);
 
     // approve the origin manually :
-    const approveTxData = exampleContract.methods.approveOrigin(domain.originHash).encodeABI();
+    const approveTxData = exampleContract.methods.approveOrigin(originHash).encodeABI();
     const signedApprovedTx = await web3.eth.accounts.signTransaction({
         to: exampleContract.options.address,
         from: testAddress,
@@ -200,7 +199,7 @@ contract('Example', (accounts) => {
         message.to.name,
         message.to.wallet,
         message.contents,
-        domain.originHash,
+        originHash,
         signature.v,
         signature.r,
         signature.s).encodeABI();
@@ -224,8 +223,8 @@ contract('Example', (accounts) => {
         version: '1',
         chainId: 1,
         verifyingContract: '0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC',
-        originHash: '0x00000000000000000000000000000000' //serve as a wild card
     };
+    const originHash = '0xb5dae52ffc95f46fe81359542fd5da76ce6c27070d6e32d88ff787c5e7ed4dc9';
     const message = {
         from: {
             name: 'Cow',
@@ -239,12 +238,11 @@ contract('Example', (accounts) => {
     }
     const eip712 = new EIP712(
         {
-            EIP712DomainWithOrigin: [
+            EIP712Domain: [
                 { name: 'name', type: 'string' },
                 { name: 'version', type: 'string' },
                 { name: 'chainId', type: 'uint256' },
-                { name: 'verifyingContract', type: 'address' },
-                { name: 'originHash', type: 'bytes32' },
+                { name: 'verifyingContract', type: 'address' }
             ],
             Person: [
                 { name: 'name', type: 'string' },
@@ -256,12 +254,12 @@ contract('Example', (accounts) => {
                 { name: 'contents', type: 'string' }
             ],
         },
-        'Mail', 'EIP712DomainWithOrigin');
+        'Mail', 'EIP712Domain');
 
-    const signature = eip712.generateSignature(domain, message, false, privateKey);
+    const signature = eip712.generateSignature(privateKey, domain, message, originHash, false);
 
     // approve the origin manually :
-    const approveTxData = exampleContract.methods.approveOrigin(domain.originHash).encodeABI();
+    const approveTxData = exampleContract.methods.approveOrigin(originHash).encodeABI();
     const signedApprovedTx = await web3.eth.accounts.signTransaction({
         to: exampleContract.options.address,
         from: testAddress,
@@ -276,7 +274,7 @@ contract('Example', (accounts) => {
         message.to.name,
         message.to.wallet,
         message.contents,
-        domain.originHash,
+        originHash,
         false,
         signature.v,
         signature.r,

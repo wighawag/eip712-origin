@@ -143,7 +143,7 @@ contract Example {
             eip712Domain.originHash
         ));
     }
-    function verify(Mail mail, bytes32 _originHash, uint8 v, bytes32 r, bytes32 s) internal view returns (bool) {
+    function verifyOriginViaDomainSeparator(Mail mail, bytes32 _originHash, uint8 v, bytes32 r, bytes32 s) internal view returns (bool) {
         // TODO require(interactive)
         // Note: we need to use `encodePacked` here instead of `encode`.
         bytes32 digest = keccak256(abi.encodePacked(
@@ -155,7 +155,7 @@ contract Example {
         return ecrecover(digest, v, r, s) == mail.from.wallet;
     }
 
-     function verify(Mail mail, bytes32 _originHash, bool interactive, uint8 v, bytes32 r, bytes32 s) internal view returns (bool) {
+     function verifyOriginViaDomainSeparator(Mail mail, bytes32 _originHash, bool interactive, uint8 v, bytes32 r, bytes32 s) internal view returns (bool) {
         // Note: we need to use `encodePacked` here instead of `encode`.
         bytes32 digest = keccak256(abi.encodePacked(
             "\x19\x01",
@@ -167,7 +167,7 @@ contract Example {
     }
 
     mapping(address => mapping(bytes32 => bytes32)) domainSeparators;
-    function approveOrigin(bytes32 _originHash) external {
+    function approveOriginViaDomainSeparator(bytes32 _originHash) external {
         domainSeparators[msg.sender][_originHash] = hash(EIP712DomainWithOrigin({ // could compute the whole thing client side
             name: "Ether Mail",
             version: '1',
@@ -177,6 +177,38 @@ contract Example {
             originHash: _originHash
         }));
     }
+
+    mapping(address => mapping(bytes32 => bytes32)) approvedOrigins;
+    function approveOrigin(bytes32 _originHash) external {
+        approvedOrigins[msg.sender][_originHash] = _originHash;
+    }
+
+    function verify(Mail mail, bytes32 _originHash, uint8 v, bytes32 r, bytes32 s) internal view returns (bool) {
+        // TODO require(interactive)
+        // Note: we need to use `encodePacked` here instead of `encode`.
+        bytes32 digest = keccak256(abi.encodePacked(
+            "\x19\x01",
+            DOMAIN_SEPARATOR,
+            hash(mail),
+            approvedOrigins[mail.from.wallet][_originHash],
+            true
+        ));
+        return ecrecover(digest, v, r, s) == mail.from.wallet;
+    }
+
+     function verify(Mail mail, bytes32 _originHash, bool interactive, uint8 v, bytes32 r, bytes32 s) internal view returns (bool) {
+        // Note: we need to use `encodePacked` here instead of `encode`.
+        bytes32 digest = keccak256(abi.encodePacked(
+            "\x19\x01",
+            DOMAIN_SEPARATOR,
+            hash(mail),
+            approvedOrigins[mail.from.wallet][_originHash],
+            interactive
+        ));
+        return ecrecover(digest, v, r, s) == mail.from.wallet;
+    }
+
+    
 
     function test(string _fromName, address _fromWallet, string _toName, address _toWallet, string _content, bytes32 _originHash, uint8 v, bytes32 r, bytes32 s) public view returns (bool) {
         // Example signed message
