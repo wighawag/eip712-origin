@@ -82,22 +82,18 @@ class EIP712{
         return ethUtil.sha3(this.encodeData(type, data));
     }
 
-    hash(domain, message, originHash, interactive) {
+    hash(domain, message) {
         const data = [
             Buffer.from('1901', 'hex'),
             this.structHash(this.domainType, domain),
             this.structHash(this.primaryType, message)
         ];
-        if(originHash) {
-            data.push(Buffer.from(originHash.slice(2), 'hex'));
-            data.push(Buffer.from(interactive ? '01' : '00', 'hex'));
-        }
         const buffer = Buffer.concat(data);
         return ethUtil.sha3(buffer);
     }
     
-    generateSignature(privateKey, domain, message, originHash, interactive) {
-        const hash = this.hash(domain, message, originHash, interactive);
+    generateSignature(privateKey, domain, message) {
+        const hash = this.hash(domain, message);
         const sig = ethUtil.ecsign(hash, privateKey);
         return {
             v: sig.v,

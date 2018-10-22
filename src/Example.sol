@@ -123,41 +123,58 @@ contract Example {
 
 
     ////////////////////////////// using origin //////
-    mapping(address => mapping(bytes32 => bytes32)) approvedOrigins;
+    mapping(address => mapping(bytes32 => bool)) approvedOrigins;
     function approveOrigin(bytes32 _originHash) external {
-        approvedOrigins[msg.sender][_originHash] = _originHash;
+        approvedOrigins[msg.sender][_originHash & 2^256-1] = true; // should not be needed if browser supply a 255bit hash
     }
 
-    function verify(Mail mail, bytes32 _originHash, uint8 v, bytes32 r, bytes32 s) internal view returns (bool) {
-        // TODO require(interactive)
-        // Note: we need to use `encodePacked` here instead of `encode`.
+    struct MailWithOrigin {
+        bytes32 originHash;  // TODO _contentHash too ?
+        Person from;
+        Person to;
+        string contents;
+    }
+
+    bytes32 constant MAIL_WITH_ORIGIN_TYPEHASH = keccak256(
+        "MailWithOrigin(bytes32 originHash,Person from,Person to,string contents)Person(string name,address wallet)"
+    );
+
+    function hash(MailWithOrigin mail) internal pure returns (bytes32) {
+        return keccak256(abi.encode(
+            MAIL_WITH_ORIGIN_TYPEHASH,
+            mail.originHash, 
+            hash(mail.from),
+            hash(mail.to),
+            keccak256(bytes(mail.contents))
+        ));
+    }
+
+    function verifyOnlySignaturesWithUserConfirmation(MailWithOrigin mail, uint8 v, bytes32 r, bytes32 s) internal view returns (bool) {
+        require(approvedOrigins[mail.from.wallet][mail.originHash & 2^256-1], "origin not approved by mail sender");
+        require(uint256(mail.originHash) % 2 == 1); // bit need to be set to interactive
+        //require(mail.userConfirmation, "signature was not confirmed by user");
         bytes32 digest = keccak256(abi.encodePacked(
             "\x19\x01",
             DOMAIN_SEPARATOR,
-            hash(mail),
-            approvedOrigins[mail.from.wallet][_originHash],
-            true
+            hash(mail)
         ));
         return ecrecover(digest, v, r, s) == mail.from.wallet;
     }
 
-     function verify(Mail mail, bytes32 _originHash, bool interactive, uint8 v, bytes32 r, bytes32 s) internal view returns (bool) {
-        // Note: we need to use `encodePacked` here instead of `encode`.
+     function verify(MailWithOrigin mail, uint8 v, bytes32 r, bytes32 s) internal view returns (bool) {
+        require(approvedOrigins[mail.from.wallet][mail.originHash & 2^256-1], "origin not approved by mail sender");
         bytes32 digest = keccak256(abi.encodePacked(
             "\x19\x01",
             DOMAIN_SEPARATOR,
-            hash(mail),
-            approvedOrigins[mail.from.wallet][_originHash],
-            interactive
+            hash(mail)
         ));
         return ecrecover(digest, v, r, s) == mail.from.wallet;
     }
 
-    
-
-    function test(string _fromName, address _fromWallet, string _toName, address _toWallet, string _content, bytes32 _originHash, uint8 v, bytes32 r, bytes32 s) public view returns (bool) {
+    function test(bytes32 _originHash, string _fromName, address _fromWallet, string _toName, address _toWallet, string _content, uint8 v, bytes32 r, bytes32 s) public view returns (bool) {
         // Example signed message
-        Mail memory mail = Mail({
+        MailWithOrigin memory mail = MailWithOrigin({
+            originHash: _originHash,
             from: Person({
                name: _fromName,
                wallet: _fromWallet
@@ -168,13 +185,15 @@ contract Example {
             }),
             contents: _content
         });
-        assert(verify(mail, _originHash, v, r, s));
+        assert(verifyOnlySignaturesWithUserConfirmation(mail, v, r, s));
         return true;
     }
 
-    function test(string _fromName, address _fromWallet, string _toName, address _toWallet, string _content, bytes32 _originHash, bool interactive, uint8 v, bytes32 r, bytes32 s) public view returns (bool) {
+
+    function testNonInteractive(bytes32 _originHash, string _fromName, address _fromWallet, string _toName, address _toWallet, string _content, uint8 v, bytes32 r, bytes32 s) public view returns (bool) {
         // Example signed message
-        Mail memory mail = Mail({
+        MailWithOrigin memory mail = MailWithOrigin({
+            originHash: _originHash,
             from: Person({
                name: _fromName,
                wallet: _fromWallet
@@ -185,7 +204,7 @@ contract Example {
             }),
             contents: _content
         });
-        assert(verify(mail, _originHash, interactive, v, r, s));
+        assert(verify(mail, v, r, s));
         return true;
     }
 
