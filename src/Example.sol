@@ -123,61 +123,6 @@ contract Example {
 
 
     ////////////////////////////// using origin //////
-    struct EIP712DomainWithOrigin {
-        string  name;
-        string  version;
-        uint256 chainId;
-        address verifyingContract;
-        bytes32 originHash;
-    }
-    bytes32 constant EIP712DOMAINWITHORIGIN_TYPEHASH = keccak256(
-        "EIP712DomainWithOrigin(string name,string version,uint256 chainId,address verifyingContract,bytes32 originHash)"
-    );
-    function hash(EIP712DomainWithOrigin eip712Domain) internal pure returns (bytes32) {
-        return keccak256(abi.encode(
-            EIP712DOMAINWITHORIGIN_TYPEHASH,
-            keccak256(bytes(eip712Domain.name)),
-            keccak256(bytes(eip712Domain.version)),
-            eip712Domain.chainId,
-            eip712Domain.verifyingContract,
-            eip712Domain.originHash
-        ));
-    }
-    function verifyOriginViaDomainSeparator(Mail mail, bytes32 _originHash, uint8 v, bytes32 r, bytes32 s) internal view returns (bool) {
-        // TODO require(interactive)
-        // Note: we need to use `encodePacked` here instead of `encode`.
-        bytes32 digest = keccak256(abi.encodePacked(
-            "\x19\x01",
-            domainSeparators[mail.from.wallet][_originHash],
-            hash(mail),
-            true
-        ));
-        return ecrecover(digest, v, r, s) == mail.from.wallet;
-    }
-
-     function verifyOriginViaDomainSeparator(Mail mail, bytes32 _originHash, bool interactive, uint8 v, bytes32 r, bytes32 s) internal view returns (bool) {
-        // Note: we need to use `encodePacked` here instead of `encode`.
-        bytes32 digest = keccak256(abi.encodePacked(
-            "\x19\x01",
-            domainSeparators[mail.from.wallet][_originHash],
-            hash(mail),
-            interactive
-        ));
-        return ecrecover(digest, v, r, s) == mail.from.wallet;
-    }
-
-    mapping(address => mapping(bytes32 => bytes32)) domainSeparators;
-    function approveOriginViaDomainSeparator(bytes32 _originHash) external {
-        domainSeparators[msg.sender][_originHash] = hash(EIP712DomainWithOrigin({ // could compute the whole thing client side
-            name: "Ether Mail",
-            version: '1',
-            chainId: 1,
-            // verifyingContract: this
-            verifyingContract: 0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC,
-            originHash: _originHash
-        }));
-    }
-
     mapping(address => mapping(bytes32 => bytes32)) approvedOrigins;
     function approveOrigin(bytes32 _originHash) external {
         approvedOrigins[msg.sender][_originHash] = _originHash;
