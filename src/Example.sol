@@ -129,20 +129,20 @@ contract Example {
     }
 
     struct MailWithOrigin {
-        bytes32 originHash;  // TODO _contentHash too ?
+        bytes32 _originHash;  // TODO _contentHash too ?
         Person from;
         Person to;
         string contents;
     }
 
     bytes32 constant MAIL_WITH_ORIGIN_TYPEHASH = keccak256(
-        "MailWithOrigin(bytes32 originHash,Person from,Person to,string contents)Person(string name,address wallet)"
+        "MailWithOrigin(bytes32 _originHash,Person from,Person to,string contents)Person(string name,address wallet)"
     );
 
     function hash(MailWithOrigin mail) internal pure returns (bytes32) {
         return keccak256(abi.encode(
             MAIL_WITH_ORIGIN_TYPEHASH,
-            mail.originHash, 
+            mail._originHash, 
             hash(mail.from),
             hash(mail.to),
             keccak256(bytes(mail.contents))
@@ -150,8 +150,8 @@ contract Example {
     }
 
     function verifyOnlySignaturesWithUserConfirmation(MailWithOrigin mail, uint8 v, bytes32 r, bytes32 s) internal view returns (bool) {
-        require(approvedOrigins[mail.from.wallet][mail.originHash & 2^256-1], "origin not approved by mail sender");
-        require(uint256(mail.originHash) % 2 == 1); // bit need to be set to interactive
+        require(approvedOrigins[mail.from.wallet][mail._originHash & 2^256-1], "origin not approved by mail sender");
+        require(uint256(mail._originHash) % 2 == 1); // bit need to be set to interactive
         //require(mail.userConfirmation, "signature was not confirmed by user");
         bytes32 digest = keccak256(abi.encodePacked(
             "\x19\x01",
@@ -162,7 +162,7 @@ contract Example {
     }
 
      function verify(MailWithOrigin mail, uint8 v, bytes32 r, bytes32 s) internal view returns (bool) {
-        require(approvedOrigins[mail.from.wallet][mail.originHash & 2^256-1], "origin not approved by mail sender");
+        require(approvedOrigins[mail.from.wallet][mail._originHash & 2^256-1], "origin not approved by mail sender");
         bytes32 digest = keccak256(abi.encodePacked(
             "\x19\x01",
             DOMAIN_SEPARATOR,
@@ -174,7 +174,7 @@ contract Example {
     function test(bytes32 _originHash, string _fromName, address _fromWallet, string _toName, address _toWallet, string _content, uint8 v, bytes32 r, bytes32 s) public view returns (bool) {
         // Example signed message
         MailWithOrigin memory mail = MailWithOrigin({
-            originHash: _originHash,
+            _originHash: _originHash,
             from: Person({
                name: _fromName,
                wallet: _fromWallet
@@ -193,7 +193,7 @@ contract Example {
     function testNonInteractive(bytes32 _originHash, string _fromName, address _fromWallet, string _toName, address _toWallet, string _content, uint8 v, bytes32 r, bytes32 s) public view returns (bool) {
         // Example signed message
         MailWithOrigin memory mail = MailWithOrigin({
-            originHash: _originHash,
+            _originHash: _originHash,
             from: Person({
                name: _fromName,
                wallet: _fromWallet

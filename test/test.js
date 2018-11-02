@@ -49,7 +49,7 @@ const mailWithOrigin = new EIP712(
         { name: 'wallet', type: 'address' }
     ],
     MailWithOrigin: [
-        { name: 'originHash', type: 'bytes32' },
+        { name: '_originHash', type: 'bytes32' },
         { name: 'from', type: 'Person' },
         { name: 'to', type: 'Person' },
         { name: 'contents', type: 'string' }
@@ -167,7 +167,7 @@ contract('Example', (accounts) => {
     const exampleContract = await getMigratedContract('Example');
     const originHash = '0xb5dae52ffc95f46fe81359542fd5da76ce6c27070d6e32d88ff787c5e7ed4dc9';
     const message = {
-        originHash: originHash,
+        _originHash: originHash,
         from: {
             name: 'Cow',
             wallet: '0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826',
@@ -192,7 +192,7 @@ contract('Example', (accounts) => {
     await web3.eth.sendSignedTransaction(signedApprovedTx.rawTransaction);
 
     const txData = exampleContract.methods.test(
-        message.originHash,
+        message._originHash,
         message.from.name, 
         message.from.wallet,
         message.to.name,
@@ -218,7 +218,7 @@ contract('Example', (accounts) => {
     const exampleContract = await getMigratedContract('Example');
     const originHash = '0xb5dae52ffc95f46fe81359542fd5da76ce6c27070d6e32d88ff787c5e7ed4dc8';
     const message = {
-        originHash: originHash,
+        _originHash: originHash,
         from: {
             name: 'Cow',
             wallet: '0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826',
@@ -243,7 +243,7 @@ contract('Example', (accounts) => {
     await web3.eth.sendSignedTransaction(signedApprovedTx.rawTransaction);
 
     const txData = exampleContract.methods.test(
-        message.originHash,
+        message._originHash,
         message.from.name, 
         message.from.wallet,
         message.to.name,
@@ -268,7 +268,7 @@ contract('Example', (accounts) => {
     const exampleContract = await getMigratedContract('Example');
     const originHash = '0xb5dae52ffc95f46fe81359542fd5da76ce6c27070d6e32d88ff787c5e7ed4dc8';
     const message = {
-        originHash: originHash,
+        _originHash: originHash,
         from: {
             name: 'Cow',
             wallet: '0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826',
@@ -293,7 +293,7 @@ contract('Example', (accounts) => {
     await web3.eth.sendSignedTransaction(signedApprovedTx.rawTransaction);
 
     const txData = exampleContract.methods.testNonInteractive(
-        message.originHash,
+        message._originHash,
         message.from.name, 
         message.from.wallet,
         message.to.name,
@@ -318,7 +318,7 @@ contract('Example', (accounts) => {
     const exampleContract = await getMigratedContract('Example');
     const originHash = '0xb5dae52ffc95f46fe81359542fd5da76ce6c27070d6e32d88ff787c5e7ed4dc9';
     const message = {
-        originHash: originHash,
+        _originHash: originHash,
         from: {
             name: 'Cow',
             wallet: '0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826',
@@ -343,7 +343,7 @@ contract('Example', (accounts) => {
     await web3.eth.sendSignedTransaction(signedApprovedTx.rawTransaction);
 
     const txData = exampleContract.methods.testNonInteractive(
-        message.originHash,
+        message._originHash,
         message.from.name, 
         message.from.wallet,
         message.to.name,
